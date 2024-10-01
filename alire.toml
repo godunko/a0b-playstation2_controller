@@ -1,0 +1,23 @@
+name = "a0b_playstation2_controller"
+description = "A0B PlayStation2 Controller Driver"
+version = "0.1.0-dev"
+
+authors = ["Vadim Godunko"]
+maintainers = ["Vadim Godunko <vgodunko@gmail.com>"]
+maintainers-logins = ["godunko"]
+licenses = "Apache-2.0 WITH LLVM-exception"
+tags = ["a0b", "embedded", "gamepad", "playstation2", "ps2"]
+
+project-files = ["gnat/a0b_playstation2_controller.gpr"]
+
+[configuration]
+generate_ada = false
+generate_c = false
+generate_gpr = true
+
+[[depends-on]]
+a0b_base = "*"
+a0b_callbacks = "*"
+a0b_exti = "*"
+a0b_spi = "*"
+a0b_timer = "*"

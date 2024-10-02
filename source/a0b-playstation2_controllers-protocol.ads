@@ -21,7 +21,7 @@ is
      array (A0B.Types.Unsigned_32 range 0 .. 31) of aliased A0B.Types.Unsigned_8
        with Alignment => 4, Size => 256;
 
-   package Packet_Builder is
+   package Packet_Encoder is
 
       procedure Poll (Buffer : out Communication_Buffer);
       --  0x42 command to poll controller's state.
@@ -58,6 +58,15 @@ is
          Button : A0B.Types.Unsigned_8);
       --  0x40 command to enables analog mode for the given button.
 
-   end Packet_Builder;
+   end Packet_Encoder;
+
+   package Packet_Decoder is
+
+      procedure Poll
+        (Buffer : Communication_Buffer;
+         State  : out Controller_State);
+      --  Parse poll command result
+
+   end Packet_Decoder;
 
 end A0B.PlayStation2_Controllers.Protocol;

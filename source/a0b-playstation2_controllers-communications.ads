@@ -16,12 +16,14 @@ private with A0B.Types;
 
 with A0B.PlayStation2_Controllers.Protocol;
 
-package A0B.PlayStation2_Controllers.Communications is
+package A0B.PlayStation2_Controllers.Communications
+  with Preelaborate
+is
 
    type Communication_Driver
      (SPI         : not null access A0B.SPI.SPI_Slave_Device'Class;
       Acknowledge : not null access A0B.EXTI.External_Interrupt_Line'Class)
-       is tagged limited private;
+       is tagged limited private with Preelaborable_Initialization;
 
    procedure Initialize (Self : in out Communication_Driver'Class);
 

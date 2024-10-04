@@ -150,8 +150,8 @@ package body A0B.PlayStation2_Controllers.Communications is
 
    procedure On_Close_Delay (Self : in out Communication_Driver'Class) is
    begin
-      Self.State   := Initial;
-      Self.Failure := False;
+      Self.State      := Initial;
+      Self.Status.all := A0B.Success;
 
       Self.Acknowledge.Disable_Interrupt;
       Self.SPI.Release_Device;
@@ -194,7 +194,6 @@ package body A0B.PlayStation2_Controllers.Communications is
    procedure On_Timeout (Self : in out Communication_Driver'Class) is
    begin
       Self.State   := Initial;
-      Self.Failure := True;
 
       Self.Transmit_Buffer := null;
       Self.Receive_Buffer  := null;

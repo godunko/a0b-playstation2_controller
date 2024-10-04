@@ -68,7 +68,6 @@ private
       Data_Received       : Flags;
       Data_Acknowledged   : Flags;
       Length              : A0B.Types.Unsigned_32;
-      Failure             : Boolean := True;
 
       Transmit_Buffer     : access
         A0B.PlayStation2_Controllers.Protocol.Communication_Buffer;

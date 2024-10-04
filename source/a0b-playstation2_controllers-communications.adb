@@ -196,6 +196,10 @@ package body A0B.PlayStation2_Controllers.Communications is
       Self.State   := Initial;
       Self.Failure := True;
 
+      Self.Transmit_Buffer := null;
+      Self.Receive_Buffer  := null;
+      Self.Status.all      := A0B.Failure;
+
       Self.Acknowledge.Disable_Interrupt;
       Self.SPI.Release_Device;
 
@@ -291,10 +295,12 @@ package body A0B.PlayStation2_Controllers.Communications is
         A0B.PlayStation2_Controllers.Protocol.Communication_Buffer;
       Receive_Buffer  : out
         A0B.PlayStation2_Controllers.Protocol.Communication_Buffer;
+      Status          : aliased out A0B.Operation_Status;
       On_Completed    : A0B.Callbacks.Callback;
       Success         : in out Boolean) is
    begin
       if not Success or Self.State /= Initial then
+         Status  := A0B.Failure;
          Success := False;
 
          return;
@@ -302,6 +308,8 @@ package body A0B.PlayStation2_Controllers.Communications is
 
       Self.Transmit_Buffer := Transmit_Buffer'Unrestricted_Access;
       Self.Receive_Buffer  := Receive_Buffer'Unrestricted_Access;
+      Self.Status          := Status'Unchecked_Access;
+      Self.Status.all      := A0B.Active;
       Self.On_Completed    := On_Completed;
 
       Self.Start_Exchange;

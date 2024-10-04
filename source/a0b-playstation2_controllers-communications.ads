@@ -33,6 +33,7 @@ is
         A0B.PlayStation2_Controllers.Protocol.Communication_Buffer;
       Receive_Buffer  : out
         A0B.PlayStation2_Controllers.Protocol.Communication_Buffer;
+      Status          : aliased out A0B.Operation_Status;
       On_Completed    : A0B.Callbacks.Callback;
       Success         : in out Boolean);
 
@@ -74,6 +75,7 @@ private
       Receive_Buffer      : access
         A0B.PlayStation2_Controllers.Protocol.Communication_Buffer;
       On_Completed        : A0B.Callbacks.Callback;
+      Status              : access A0B.Operation_Status;
    end record;
 
 end A0B.PlayStation2_Controllers.Communications;

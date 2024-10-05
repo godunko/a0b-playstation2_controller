@@ -16,6 +16,41 @@ package body A0B.PlayStation2_Controllers.Protocol is
 
    package body Packet_Decoder is
 
+      type Payload_Length is new A0B.Types.Unsigned_32 range 0 .. 30;
+      --  Size of the payload (excluding header).
+
+      type Controller_Kind is new A0B.Types.Unsigned_4;
+
+      Digital : constant Controller_Kind := 4;
+      Analog  : constant Controller_Kind := 5;
+      Shock   : constant Controller_Kind := 7;
+      --  These modes is used for gamepads and joysticks. Mouse, keyboard use
+      --  own modes.
+
+      function Kind (Buffer : Communication_Buffer) return Controller_Kind;
+
+      function Length (Buffer : Communication_Buffer) return Payload_Length;
+
+      ----------
+      -- Kind --
+      ----------
+
+      function Kind (Buffer : Communication_Buffer) return Controller_Kind is
+      begin
+         return Controller_Kind (A0B.Types.Shift_Right (Buffer (0), 4));
+      end Kind;
+
+      ------------
+      -- Length --
+      ------------
+
+      function Length  (Buffer : Communication_Buffer) return Payload_Length is
+         use type A0B.Types.Unsigned_8;
+
+      begin
+         return Payload_Length (Buffer (0) and 16#0F#) * 2;
+      end Length;
+
       ----------
       -- Poll --
       ----------
@@ -25,7 +60,7 @@ package body A0B.PlayStation2_Controllers.Protocol is
          State  : out Controller_State)
       is
 
-         type Digital_Buttons_1 is record
+         type Digital_Buttons_1_Record is record
             Select_Button          : Boolean;
             Left_Joystick          : Boolean;
             Right_Joystick         : Boolean;
@@ -36,7 +71,7 @@ package body A0B.PlayStation2_Controllers.Protocol is
             Left_Direction_Button  : Boolean;
          end record with Pack, Size => 8;
 
-         type Digital_Buttons_2 is record
+         type Digital_Buttons_2_Record is record
             Left_2_Button   : Boolean;
             Right_2_Button  : Boolean;
             Left_1_Button   : Boolean;
@@ -47,7 +82,7 @@ package body A0B.PlayStation2_Controllers.Protocol is
             Square_Button   : Boolean;
          end record with Pack, Size => 8;
 
-         type Analog_Buttons is record
+         type Analog_Buttons_Record is record
             Right_Joystick_Horizontal : A0B.Types.Unsigned_8;
             Right_Joystick_Vertical   : A0B.Types.Unsigned_8;
             Left_Joystick_Horizontal  : A0B.Types.Unsigned_8;
@@ -69,21 +104,50 @@ package body A0B.PlayStation2_Controllers.Protocol is
             Right_2_Button            : A0B.Types.Unsigned_8;
          end record with Pack, Size => 128;
 
-      --  Buffer        :
-      --    A0B.PlayStation2_Controllers.Protocol.Communication_Buffer
-      --      renames Receive_Buffer;
-        --  renames Self.Buffer (Self.Communication_Buffer + 1);
-   --     Configuration : Async.Configuration
-   --       renames Self.Configuration (Self.Active_Configuration);
-
-         Digital_1 : Digital_Buttons_1
+         Digital_1      : Digital_Buttons_1_Record
            with Import, Address => Buffer (2)'Address;
-         Digital_2 : Digital_Buttons_2
+         Digital_2      : Digital_Buttons_2_Record
            with Import, Address => Buffer (3)'Address;
-         Analog    : Analog_Buttons
+         Analog_Buttons : Analog_Buttons_Record
            with Import, Address => Buffer (4)'Address;
 
+         Has_Analog_Joysticks : Boolean;
+         Has_Analog_Buttons   : Boolean;
+
       begin
+         --  Check controller's mode and payload length to detect
+         --  gamepads/joysticks.
+
+         if Kind (Buffer) = Digital and Length (Buffer) = 2 then
+            Has_Analog_Joysticks := False;
+            Has_Analog_Buttons   := False;
+
+         elsif Kind (Buffer) = Analog and Length (Buffer) = 6 then
+            Has_Analog_Joysticks := True;
+            Has_Analog_Buttons   := False;
+
+         elsif Kind (Buffer) = Shock and Length (Buffer) = 6 then
+            Has_Analog_Joysticks := True;
+            Has_Analog_Buttons   := False;
+
+         elsif Kind (Buffer) = Shock and Length (Buffer) = 18 then
+            Has_Analog_Joysticks := True;
+            Has_Analog_Buttons   := True;
+
+         else
+            --  Unsupported controller kind and/or payload length, fill result
+            --  by neutral values.
+
+            State :=
+              (Right_Joystick_Horizontal => 16#80#,
+               Right_Joystick_Vertical   => 16#80#,
+               Left_Joystick_Horizontal  => 16#80#,
+               Left_Joystick_Vertical    => 16#80#,
+               others                    => 16#00#);
+
+            return;
+         end if;
+
          --  In digital mode, joystick position is not reported. Report of the
          --  middle position is forced.
 
@@ -131,29 +195,37 @@ package body A0B.PlayStation2_Controllers.Protocol is
          State.Left_2_Button :=
            (if Digital_2.Left_2_Button then 16#00# else 16#FF#);
 
-   --     if Configuration.Analog_Joysticks then
-         State.Right_Joystick_Horizontal := Analog.Right_Joystick_Horizontal;
-         State.Right_Joystick_Vertical   := Analog.Right_Joystick_Vertical;
-         State.Left_Joystick_Horizontal  := Analog.Left_Joystick_Horizontal;
-         State.Left_Joystick_Vertical    := Analog.Left_Joystick_Vertical;
-   --
-   --        if Configuration.Analog_Buttons then
-   --           State.Right_Direction_Button := Analog.Right_Direction_Button;
-   --           State.Left_Direction_Button  := Analog.Left_Direction_Button;
-   --           State.Up_Direction_Button    := Analog.Up_Direction_Button;
-   --           State.Down_Direction_Button  := Analog.Down_Direction_Button;
-   --
-   --           State.Triangle_Button        := Analog.Triangle_Button;
-   --           State.Circle_Button          := Analog.Circle_Button;
-   --           State.Cross_Button           := Analog.Cross_Button;
-   --           State.Square_Button          := Analog.Square_Button;
-   --
-   --           State.Left_1_Button          := Analog.Left_1_Button;
-   --           State.Right_1_Button         := Analog.Right_1_Button;
-   --           State.Left_2_Button          := Analog.Left_2_Button;
-   --           State.Right_2_Button         := Analog.Right_2_Button;
-   --        end if;
-   --     end if;
+         if Has_Analog_Joysticks then
+            State.Right_Joystick_Horizontal :=
+              Analog_Buttons.Right_Joystick_Horizontal;
+            State.Right_Joystick_Vertical   :=
+              Analog_Buttons.Right_Joystick_Vertical;
+            State.Left_Joystick_Horizontal  :=
+              Analog_Buttons.Left_Joystick_Horizontal;
+            State.Left_Joystick_Vertical    :=
+              Analog_Buttons.Left_Joystick_Vertical;
+
+            if Has_Analog_Buttons then
+               State.Right_Direction_Button :=
+                 Analog_Buttons.Right_Direction_Button;
+               State.Left_Direction_Button  :=
+                 Analog_Buttons.Left_Direction_Button;
+               State.Up_Direction_Button    :=
+                 Analog_Buttons.Up_Direction_Button;
+               State.Down_Direction_Button  :=
+                 Analog_Buttons.Down_Direction_Button;
+
+               State.Triangle_Button        := Analog_Buttons.Triangle_Button;
+               State.Circle_Button          := Analog_Buttons.Circle_Button;
+               State.Cross_Button           := Analog_Buttons.Cross_Button;
+               State.Square_Button          := Analog_Buttons.Square_Button;
+
+               State.Left_1_Button          := Analog_Buttons.Left_1_Button;
+               State.Right_1_Button         := Analog_Buttons.Right_1_Button;
+               State.Left_2_Button          := Analog_Buttons.Left_2_Button;
+               State.Right_2_Button         := Analog_Buttons.Right_2_Button;
+            end if;
+         end if;
       end Poll;
 
    end Packet_Decoder;
